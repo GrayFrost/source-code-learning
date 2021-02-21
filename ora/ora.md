@@ -1,6 +1,7 @@
 # 源码解读之旅|第一站（ora）
 
 ## 前言
+
 Hello，大家好。这是我在社区的第一篇文章。之前一直思考应该写什么类型的文章，是写面试题、源码解读、新颖技术，亦或是算法解答、项目难点等，思来想去，最终选择了源码解读这个方向。  
 在最开始的时候，我没有选择诸如React、Vue这些热门的库的源码进行解读，而是选择了一些我们常使用，小而精简的库。因为万事开头难，我觉的自己并不是那种有毅力一上来就挑战高难度任务的人，如果能够坚持下去，后去肯定会去解读。废话不多说，让我们起航吧。
 
@@ -193,29 +194,29 @@ class Ora {
 class Ora {
   constructor(options){
     if (!stdinDiscarder) {
-			stdinDiscarder = new StdinDiscarder();
-		}
+      stdinDiscarder = new StdinDiscarder();
+    }
 
-		if (typeof options === 'string') { // 简化配置赋值的操作，对应api的ora(text)
-			options = {
-				text: options
-			};
-		}
+    if (typeof options === 'string') { // 简化配置赋值的操作，对应api的ora(text)
+      options = {
+        text: options
+      };
+    }
     
     this.options = {
-			text: '',
-			color: 'cyan',
-			stream: process.stderr, // 发现这里使用了process.stderr而不是process.stdout
-			discardStdin: true,
-			...options
-		};
+      text: '',
+      color: 'cyan',
+      stream: process.stderr, // 发现这里使用了process.stderr而不是process.stdout
+      discardStdin: true,
+      ...options
+    };
     
     this.spinner = this.options.spinner;
 
-		this.color = this.options.color;
-		this.hideCursor = this.options.hideCursor !== false;
-		this.interval = this.options.interval || this.spinner.interval || 100;
-		this.stream = this.options.stream;
+    this.color = this.options.color;
+    this.hideCursor = this.options.hideCursor !== false;
+    this.interval = this.options.interval || this.spinner.interval || 100;
+    this.stream = this.options.stream;
     // ... 剩余的初始化，不写了
   }
 }
@@ -223,7 +224,7 @@ class Ora {
 
 初始化了一个StdinDiscarder实例，查看官网api的`discardStdin`相关介绍：
 
-```
+``` text
 discardStdin
 Type: boolean
 Default: true
@@ -244,7 +245,7 @@ class Ora {
   start() {
     // ... 其他内容
     this.render();
-		this.id = setInterval(this.render.bind(this), this.interval);
+    this.id = setInterval(this.render.bind(this), this.interval);
     return this;
   }
 }
@@ -256,14 +257,14 @@ class Ora {
 class Ora {
   render() {
     if (this.isSilent) {
-			return this;
-		}
+      return this;
+    }
 
-		this.clear();
-		this.stream.write(this.frame());
-		this.linesToClear = this.lineCount;
+    this.clear();
+    this.stream.write(this.frame());
+    this.linesToClear = this.lineCount;
 
-		return this;
+    return this;
   }
 }
 ```
@@ -278,21 +279,21 @@ class Ora {
 class Ora {
   clear(){
     if (!this.isEnabled || !this.stream.isTTY) {
-			return this;
-		}
+      return this;
+    }
 
-		for (let i = 0; i < this.linesToClear; i++) {
-			if (i > 0) {
-				this.stream.moveCursor(0, -1);
-			}
+    for (let i = 0; i < this.linesToClear; i++) {
+      if (i > 0) {
+        this.stream.moveCursor(0, -1);
+      }
 
-			this.stream.clearLine();
-			this.stream.cursorTo(this.indent);
-		}
+      this.stream.clearLine();
+      this.stream.cursorTo(this.indent);
+    }
 
-		this.linesToClear = 0;
+    this.linesToClear = 0;
 
-		return this;
+    return this;
   }
 }
 ```
@@ -333,24 +334,24 @@ class Ora {
   set spinner(spinner){
     this.frameIndex = 0;
 
-		if (typeof spinner === 'object') {
-			if (spinner.frames === undefined) {
-				throw new Error('The given spinner must have a `frames` property');
-			}
+    if (typeof spinner === 'object') {
+      if (spinner.frames === undefined) {
+        throw new Error('The given spinner must have a `frames` property');
+      }
 
-			this._spinner = spinner;
-		} else if (!terminalSupportsUnicode()) {
-			this._spinner = cliSpinners.line;
-		} else if (spinner === undefined) {
-			// Set default spinner
-			this._spinner = cliSpinners.dots;
-		} else if (cliSpinners[spinner]) {
-			this._spinner = cliSpinners[spinner];
-		} else {
-			throw new Error(`There is no built-in spinner named '${spinner}'. See https://github.com/sindresorhus/cli-spinners/blob/main/spinners.json for a full list.`);
-		}
+      this._spinner = spinner;
+    } else if (!terminalSupportsUnicode()) {
+      this._spinner = cliSpinners.line;
+    } else if (spinner === undefined) {
+      // Set default spinner
+      this._spinner = cliSpinners.dots;
+    } else if (cliSpinners[spinner]) {
+      this._spinner = cliSpinners[spinner];
+    } else {
+      throw new Error(`There is no built-in spinner named '${spinner}'. See https://github.com/sindresorhus/cli-spinners/blob/main/spinners.json for a full list.`);
+    }
 
-		this._updateInterval(this._spinner.interval);
+    this._updateInterval(this._spinner.interval);
   }
 }
 ```
@@ -388,23 +389,23 @@ const terminalSupportsUnicode = () => (
 class Ora {
   stop(){
     if (!this.isEnabled) {
-			return this;
-		}
+      return this;
+    }
 
-		clearInterval(this.id);
-		this.id = undefined;
-		this.frameIndex = 0;
-		this.clear();
-		if (this.hideCursor) {
-			cliCursor.show(this.stream);
-		}
+    clearInterval(this.id);
+    this.id = undefined;
+    this.frameIndex = 0;
+    this.clear();
+    if (this.hideCursor) {
+      cliCursor.show(this.stream);
+    }
 
-		if (this.discardStdin && process.stdin.isTTY && this.isDiscardingStdin) {
-			stdinDiscarder.stop();
-			this.isDiscardingStdin = false;
-		}
+    if (this.discardStdin && process.stdin.isTTY && this.isDiscardingStdin) {
+      stdinDiscarder.stop();
+      this.isDiscardingStdin = false;
+    }
 
-		return this;
+    return this;
   }
 }
 ```
@@ -426,4 +427,3 @@ ora的实现原理还挺简单的，主要使用了tty终端输出流，配合�
 [tty](https://nodejs.org/dist/latest-v14.x/docs/api/tty.html)
 
 [process.env.WT_SESSION](https://github.com/microsoft/terminal/issues/1040)
-
