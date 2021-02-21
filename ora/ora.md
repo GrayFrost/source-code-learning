@@ -1,12 +1,14 @@
 # 源码解读之旅|第一站（ora）
 
 ## 前言
-Hello，大家好。这是我在社区的第一篇文章。之前一直思考应该写什么类型的文章，是写面试题、源码解读、新颖技术，亦或是算法解答、项目难点等，思来想去，最终选择了源码解读这个方向。
+Hello，大家好。这是我在社区的第一篇文章。之前一直思考应该写什么类型的文章，是写面试题、源码解读、新颖技术，亦或是算法解答、项目难点等，思来想去，最终选择了源码解读这个方向。  
 在最开始的时候，我没有选择诸如React、Vue这些热门的库的源码进行解读，而是选择了一些我们常使用，小而精简的库。因为万事开头难，我觉的自己并不是那种有毅力一上来就挑战高难度任务的人，如果能够坚持下去，后去肯定会去解读。废话不多说，让我们起航吧。
+
+**Tip**：无法事无巨细，只解读核心功能。
 
 ## WHAT
 
-[ora](https://github.com/sindresorhus/ora)是一款优雅的终端加载动画效果。
+[ora](https://github.com/sindresorhus/ora)是一款优雅的终端加载动画效果。    
 
 如果你是Vue的拥趸，那在使用vue-cli来创建项目时，一定注意到了这个spin动画效果。没错，vue-cli便是引用了ora。
 
@@ -98,7 +100,7 @@ module.exports.promise = (action, options) => {}
 
 ``` javascript
 const readline = require('readline'); // node的内置模块，逐行读取
-const chalk = require('chalk'); // 
+const chalk = require('chalk'); // 修改终端输出字符样式的npm包
 const cliCursor = require('cli-cursor'); // ora作者提供的工具，终端光标相关，可以不关注
 const cliSpinners = require('cli-spinners'); // ora作者提供的工具，spinner显示内容的配置，下文会列出配置的格式
 const logSymbols = require('log-symbols'); // // info|success|warning|error配合chalk组成的颜色字体集合，做了系统间的兼容
@@ -134,6 +136,61 @@ cliCursor会读取写好的配置，我们看看配置中的格式是怎么样�
 
 ### 解读
 
+我们找到入口392行：
+
+``` javascript
+const oraFactory = function (options) {
+	return new Ora(options);
+};
+
+module.exports = oraFactory;
+module.exports.promise = (action, options) => {} // 对应api中的ora.promise(action, options)的实现，略过
+```
+
+这里使用了工厂模式。    
+
+接着解读核心Ora类
+
+``` javascript
+class Ora {
+  constructor(options){}
+  get indent(){}
+  set indent(indent = 0){}
+  _updateInterval(interval){}
+  get spinner(){}
+  set spinner(spinner){}
+  get text(){}
+  set text(){}
+  get prefixText(){}
+  set prefixText(value){}
+  get isSpinning(){}
+  getFullPrefixText(prefixText = this[PREFIX_TEXT], postfix = ' '){}
+  updateLineCount(){}
+  get isEnabled(){}
+  set isEnabled(value){}
+  get isSilent(){}
+  set isSilent(value){}
+  frame(){}
+  clear(){}
+  render(){}
+  start(text){}
+  stop(){}
+  succeed(text){}
+  fail(text){}
+  warn(text){}
+  info(text){}
+  stopAndPersist(options = {}){}
+}
+```
+
+根据官网的使用例子，我们要走完一个简单的使用流程，只要调用实例的start方法即可。根据这个提示，我们主要探寻Ora类中的`constructor`、`start`、`stop`这几个方法及它们所关联的方法，剩余的api我们无需过多探究，有兴趣可以了解。
+
+#### constructor
+
+#### start
+
+#### stop
+
 来到第17行的函数`terminalSupportsUnicode`。
 
 ``` javascript
@@ -144,7 +201,7 @@ const terminalSupportsUnicode = () => (
 );
 ```
 
-很明显是判断终端是否支持unicode的方法。
+很明显是判断终端是否支持unicode的方法。如果不是windows系统或者是vscode或者是在windows终端上，查了一下`process.env.WT_SESSION`可以用来检测是否为windows上的终端。
 
 
 
@@ -153,3 +210,8 @@ const terminalSupportsUnicode = () => (
 生活无处不惊喜，代码亦如此，多驻足一下啦！我们下期再见。
 
 ## 参考
+
+[readline](https://nodejs.org/dist/latest-v14.x/docs/api/readline.html)
+
+[process.env.WT_SESSION](https://github.com/microsoft/terminal/issues/1040)
+
