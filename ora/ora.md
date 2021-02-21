@@ -118,20 +118,20 @@ cliCursor会读取写好的配置，我们看看配置中的格式是怎么样�
 ``` json
 {
   "dots": {
-		"interval": 80,
-		"frames": [
-			"⠋",
-			"⠙",
-			"⠹",
-			"⠸",
-			"⠼",
-			"⠴",
-			"⠦",
-			"⠧",
-			"⠇",
-			"⠏"
-		]
-	},
+    "interval": 80,
+    "frames": [
+      "⠋",
+      "⠙",
+      "⠹",
+      "⠸",
+      "⠼",
+      "⠴",
+      "⠦",
+      "⠧",
+      "⠇",
+      "⠏"
+    ]
+  },
 }
 ```
 
@@ -308,17 +308,17 @@ class Ora {
 class Ora {
   frame(){
     const {frames} = this.spinner;
-		let frame = frames[this.frameIndex];
+    let frame = frames[this.frameIndex];
 
-		if (this.color) {
-			frame = chalk[this.color](frame);
-		}
+    if (this.color) {
+        frame = chalk[this.color](frame);
+    }
 
-		this.frameIndex = ++this.frameIndex % frames.length;
-		const fullPrefixText = (typeof this.prefixText === 'string' && this.prefixText !== '') ? this.prefixText + ' ' : '';
-		const fullText = typeof this.text === 'string' ? ' ' + this.text : '';
+    this.frameIndex = ++this.frameIndex % frames.length;
+    const fullPrefixText = (typeof this.prefixText === 'string' && this.prefixText !== '') ? this.prefixText + ' ' : '';
+    const fullText = typeof this.text === 'string' ? ' ' + this.text : '';
 
-		return fullPrefixText + frame + fullText;
+    return fullPrefixText + frame + fullText;
   }
 }
 ```
@@ -361,9 +361,9 @@ class Ora {
 ``` json
 {
   "dots": {
-		"interval": 80,
-		"frames": []
-	},
+    "interval": 80,
+    "frames": []
+  },
 }
 ```
 
@@ -373,9 +373,9 @@ class Ora {
 
 ``` javascript
 const terminalSupportsUnicode = () => (
-	process.platform !== 'win32' ||
-	process.env.TERM_PROGRAM === 'vscode' ||
-	Boolean(process.env.WT_SESSION)
+  process.platform !== 'win32' ||
+  process.env.TERM_PROGRAM === 'vscode' ||
+  Boolean(process.env.WT_SESSION)
 );
 ```
 
@@ -427,3 +427,6 @@ ora的实现原理还挺简单的，主要使用了tty终端输出流，配合�
 [tty](https://nodejs.org/dist/latest-v14.x/docs/api/tty.html)
 
 [process.env.WT_SESSION](https://github.com/microsoft/terminal/issues/1040)
+
+
+
