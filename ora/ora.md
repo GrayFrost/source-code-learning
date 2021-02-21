@@ -115,7 +115,8 @@ const {BufferListStream} = require('bl'); // buffer收集器
 cliCursor会读取写好的配置，我们看看配置中的格式是怎么样的。记住这个格式，因为我们似乎掌握核心了。
 
 ``` json
-"dots": {
+{
+  "dots": {
 		"interval": 80,
 		"frames": [
 			"⠋",
@@ -130,6 +131,7 @@ cliCursor会读取写好的配置，我们看看配置中的格式是怎么样�
 			"⠏"
 		]
 	},
+}
 ```
 
 
@@ -187,11 +189,186 @@ class Ora {
 
 #### constructor
 
+``` javascript
+class Ora {
+  constructor(options){
+    if (!stdinDiscarder) {
+			stdinDiscarder = new StdinDiscarder();
+		}
+
+		if (typeof options === 'string') { // 简化配置赋值的操作，对应api的ora(text)
+			options = {
+				text: options
+			};
+		}
+    
+    this.options = {
+			text: '',
+			color: 'cyan',
+			stream: process.stderr, // 发现这里使用了process.stderr而不是process.stdout
+			discardStdin: true,
+			...options
+		};
+    
+    this.spinner = this.options.spinner;
+
+		this.color = this.options.color;
+		this.hideCursor = this.options.hideCursor !== false;
+		this.interval = this.options.interval || this.spinner.interval || 100;
+		this.stream = this.options.stream;
+    // ... 剩余的初始化，不写了
+  }
+}
+```
+
+初始化了一个StdinDiscarder实例，查看官网api的`discardStdin`相关介绍：
+
+```
+discardStdin
+Type: boolean
+Default: true
+
+Discard stdin input (except Ctrl+C) while running if it's TTY. This prevents the spinner from twitching on input, outputting broken lines on Enter key presses, and prevents buffering of input while the spinner is running.
+
+This has no effect on Windows as there's no good way to implement discarding stdin properly there.
+```
+
+从中可以知道是一些输入流的处理。StdinDiscarder的内部实现内容还挺多的，但我们可以略过，不影响主流程。
+
 #### start
 
-#### stop
+start方法里主要关注的是render方法，发现start就是开启setInterval定时器，定时执行render方法。
 
-来到第17行的函数`terminalSupportsUnicode`。
+``` javascript
+class Ora {
+  start() {
+    // ... 其他内容
+    this.render();
+		this.id = setInterval(this.render.bind(this), this.interval);
+    return this;
+  }
+}
+```
+
+进入render方法
+
+``` javascript
+class Ora {
+  render() {
+    if (this.isSilent) {
+			return this;
+		}
+
+		this.clear();
+		this.stream.write(this.frame());
+		this.linesToClear = this.lineCount;
+
+		return this;
+  }
+}
+```
+
+到这里我们基本可以理清楚基本逻辑了，在render方法里，我们先清空上一次的内容，然后写入流写入一个新的字符串，后面这句`this.linesToClear = this.lineCount;`是配合clear方法使用的。
+
+
+
+进入clear方法
+
+``` javascript
+class Ora {
+  clear(){
+    if (!this.isEnabled || !this.stream.isTTY) {
+			return this;
+		}
+
+		for (let i = 0; i < this.linesToClear; i++) {
+			if (i > 0) {
+				this.stream.moveCursor(0, -1);
+			}
+
+			this.stream.clearLine();
+			this.stream.cursorTo(this.indent);
+		}
+
+		this.linesToClear = 0;
+
+		return this;
+  }
+}
+```
+
+我们可以看到，清除内容的逻辑里有清空行`clearLine`和光标移动`cursorTo`这两个方法。这两个方法可以在tty模块中找到。这两个方法的调用对内容的刷新后展示挺重要的，我自己在模拟实现时，发现如果没有使用cursorTo()，每次刷新后的内容位置是叠加往后的。
+
+
+
+进入frame方法
+
+``` javascript
+class Ora {
+  frame(){
+    const {frames} = this.spinner;
+		let frame = frames[this.frameIndex];
+
+		if (this.color) {
+			frame = chalk[this.color](frame);
+		}
+
+		this.frameIndex = ++this.frameIndex % frames.length;
+		const fullPrefixText = (typeof this.prefixText === 'string' && this.prefixText !== '') ? this.prefixText + ' ' : '';
+		const fullText = typeof this.text === 'string' ? ' ' + this.text : '';
+
+		return fullPrefixText + frame + fullText;
+  }
+}
+```
+
+在读`const {frames} = this.spinner`这行的时候，我很奇怪，我在初始化的时候没有看到frames相关的设置啊，那它是哪来的。仔细找，发现原来有个`set spinner()`，我们在初始化`this.spinner = this.options.spinner`时边会调用。
+
+
+
+进入set spinner
+
+``` javascript
+class Ora {
+  set spinner(spinner){
+    this.frameIndex = 0;
+
+		if (typeof spinner === 'object') {
+			if (spinner.frames === undefined) {
+				throw new Error('The given spinner must have a `frames` property');
+			}
+
+			this._spinner = spinner;
+		} else if (!terminalSupportsUnicode()) {
+			this._spinner = cliSpinners.line;
+		} else if (spinner === undefined) {
+			// Set default spinner
+			this._spinner = cliSpinners.dots;
+		} else if (cliSpinners[spinner]) {
+			this._spinner = cliSpinners[spinner];
+		} else {
+			throw new Error(`There is no built-in spinner named '${spinner}'. See https://github.com/sindresorhus/cli-spinners/blob/main/spinners.json for a full list.`);
+		}
+
+		this._updateInterval(this._spinner.interval);
+  }
+}
+```
+
+这里我们可以看到，如果没有配spinner，则会帮我们配置。还记得之前说的那个配置文件的格式吗？
+
+``` json
+{
+  "dots": {
+		"interval": 80,
+		"frames": []
+	},
+}
+```
+
+没错，cliSpinners.dots帮我们赋值给了this.spinner。
+
+顺便来到第17行的函数`terminalSupportsUnicode`看一下。
 
 ``` javascript
 const terminalSupportsUnicode = () => (
@@ -201,17 +378,52 @@ const terminalSupportsUnicode = () => (
 );
 ```
 
-很明显是判断终端是否支持unicode的方法。如果不是windows系统或者是vscode或者是在windows终端上，查了一下`process.env.WT_SESSION`可以用来检测是否为windows上的终端。
+很明显这个是判断终端是否支持unicode的方法。如果不是windows系统或者是vscode或者是在windows终端上，查了一下`process.env.WT_SESSION`可以用来检测是否为windows上的终端。
 
+回到frame方法，可以轻松的整理出逻辑，每更新一次，便获取frames里的一个数据，然后循环获取。到这里，我们的源码解读可以说基本完成了。
 
+#### stop
+
+``` javascript
+class Ora {
+  stop(){
+    if (!this.isEnabled) {
+			return this;
+		}
+
+		clearInterval(this.id);
+		this.id = undefined;
+		this.frameIndex = 0;
+		this.clear();
+		if (this.hideCursor) {
+			cliCursor.show(this.stream);
+		}
+
+		if (this.discardStdin && process.stdin.isTTY && this.isDiscardingStdin) {
+			stdinDiscarder.stop();
+			this.isDiscardingStdin = false;
+		}
+
+		return this;
+  }
+}
+```
+
+可以知道，stop主要就是做一些结束工作，比如清空定时器，重置配置内容等。
 
 ## 总结
+
+ora的实现原理还挺简单的，主要使用了tty终端输出流，配合定时器来更新输入的内容。可以自己[简单实现](https://github.com/GrayFrost/source-code-learning/blob/main/ora/ora.js)一个，你会发现核心内容不过四五十行代码。  
 
 生活无处不惊喜，代码亦如此，多驻足一下啦！我们下期再见。
 
 ## 参考
 
 [readline](https://nodejs.org/dist/latest-v14.x/docs/api/readline.html)
+
+[process](https://nodejs.org/dist/latest-v14.x/docs/api/process.html)
+
+[tty](https://nodejs.org/dist/latest-v14.x/docs/api/tty.html)
 
 [process.env.WT_SESSION](https://github.com/microsoft/terminal/issues/1040)
 
